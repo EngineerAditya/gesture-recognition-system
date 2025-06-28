@@ -1,14 +1,11 @@
 import cv2 as cv
 import mediapipe as mp
-import pandas as pd
 import os
 import csv
-from datetime import datetime
 import time
 import tkinter as tk
 from tkinter import messagebox
-
-# I have used ChatGPT to structure the code and add comments wherever required :D
+from datetime import datetime
 
 # ----------------- Tkinter GUI -----------------
 gesture_label = None
@@ -45,7 +42,7 @@ root.mainloop()
 
 # ----------------- Main Recording Code -----------------
 
-SAVE_RAW_VIDEO = True
+SAVE_RAW_VIDEO = False # Set to True if you want to save raw video 
 OUTPUT_FOLDER = "data/processed_csv"
 RAW_VIDEO_FOLDER = "data/raw_videos"
 DURATION_SEC = 30
@@ -94,7 +91,7 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 if SAVE_RAW_VIDEO:
     fourcc = cv.VideoWriter_fourcc(*'XVID')
-    video_filename = os.path.join(RAW_VIDEO_FOLDER, f"{gesture_label}_{timestamp}.avi")
+    video_filename = os.path.join(RAW_VIDEO_FOLDER, f"{gesture_label}_{timestamp}.mp4")
     out = cv.VideoWriter(video_filename, fourcc, 20.0, (640, 480))
 
 columns = (
@@ -170,3 +167,9 @@ if SAVE_RAW_VIDEO:
 cv.destroyAllWindows()
 
 print(f"Landmark data saved to {csv_filename}")
+
+# ----------------- Popup after recording -----------------
+popup = tk.Tk()
+popup.withdraw()  # Hide main window
+messagebox.showinfo("Recording Complete", f"Gesture '{gesture_label}' recorded successfully!")
+popup.destroy()
