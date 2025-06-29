@@ -1,8 +1,17 @@
-install dependent libraries :D
-numpy
-pandas
+
+
 opencv-python
 mediapipe
-scikit-learn
+numpy
 tensorflow
-python version - 3.10.14
+pyttsx3
+playsound
+pandas
+scikit-learn
+
+
+# Additional system dependency for Linux users:
+# Run this BEFORE pip install if on Linux:
+
+sudo apt update
+sudo apt install espeak

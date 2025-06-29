@@ -1,5 +1,5 @@
 # I have used ChatGPT to structure and make this code readable 😄
-# Run this file to start webcam-based gesture recognition
+# Run this file to start webcam-based gesture recognition with threaded TTS
 
 import cv2 as cv
 import mediapipe as mp
@@ -10,6 +10,7 @@ import os
 import pyttsx3
 import time
 import platform
+import threading
 
 # ----------------- Load Saved Model & Label Encoder -----------------
 print("[INFO] Loading TensorFlow model and label encoder...")
@@ -49,6 +50,11 @@ else:
 engine.setProperty('rate', 135)  # Adjust speed
 print(f"[INFO] TTS engine ready for {system_os.capitalize()}")
 
+# ----------------- Helper Function for Threaded TTS -----------------
+def speak_text(text):
+    engine.say(text)
+    engine.runAndWait()
+
 # ----------------- Start Webcam -----------------
 cap = cv.VideoCapture(0)
 if not cap.isOpened():
@@ -60,7 +66,7 @@ print("[INFO] Webcam started. Press 'q' to quit.")
 # ----------------- Live Prediction Loop -----------------
 last_gesture = None
 last_spoken_time = 0
-cooldown_sec = 3
+cooldown_sec = 3  # Cooldown between speaking
 
 while True:
     ret, frame = cap.read()
@@ -109,8 +115,7 @@ while True:
 
         current_time = time.time()
         if gesture_name != last_gesture or (current_time - last_spoken_time) >= cooldown_sec:
-            engine.say(gesture_name)
-            engine.runAndWait()
+            threading.Thread(target=speak_text, args=(gesture_name,), daemon=True).start()
             last_spoken_time = current_time
             last_gesture = gesture_name
 
