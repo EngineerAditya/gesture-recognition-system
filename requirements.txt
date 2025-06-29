@@ -1,0 +1,8 @@
+install dependent libraries :D
+numpy
+pandas
+opencv-python
+mediapipe
+scikit-learn
+tensorflow
+python version - 3.10.14

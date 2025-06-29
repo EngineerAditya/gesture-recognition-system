@@ -1,13 +1,18 @@
+# I have used ChatGPT to structure and make this code readable 😄
+# Purpose: Record gesture video + landmark data with MediaPipe and save to CSV
+# Notes: Tkinter input for gesture name, recording confirmation popup included
+
 import cv2 as cv
 import mediapipe as mp
+import pandas as pd
 import os
 import csv
+from datetime import datetime
 import time
 import tkinter as tk
 from tkinter import messagebox
-from datetime import datetime
 
-# ----------------- Tkinter GUI -----------------
+# ----------------- Tkinter GUI for Gesture Name -----------------
 gesture_label = None
 
 def start_program():
@@ -40,9 +45,8 @@ start_button.pack(pady=15)
 
 root.mainloop()
 
-# ----------------- Main Recording Code -----------------
-
-SAVE_RAW_VIDEO = False # Set to True if you want to save raw video 
+# ----------------- Main Recording Setup -----------------
+SAVE_RAW_VIDEO = True
 OUTPUT_FOLDER = "data/processed_csv"
 RAW_VIDEO_FOLDER = "data/raw_videos"
 DURATION_SEC = 30
@@ -57,16 +61,16 @@ mp_draw = mp.solutions.drawing_utils
 
 cap = cv.VideoCapture(0)
 if not cap.isOpened():
-    print("Error: Could not open webcam.")
+    print("[ERROR] Could not open webcam.")
     exit()
+#This code is written by Aditya Sinha https://www.linkedin.com/in/adityasinha2006/
+print("[INFO] Press 's' to start recording or 'q' to quit.")
 
-print("Press 's' to start recording or 'q' to quit.")
-
-# -------- Wait for key press loop --------
+# ----------------- Wait for Start/Exit Key -----------------
 while True:
     ret, frame = cap.read()
     if not ret:
-        print("Error: Failed to grab frame.")
+        print("[ERROR] Failed to grab frame.")
         break
 
     frame = cv.flip(frame, 1)
@@ -77,16 +81,18 @@ while True:
 
     key = cv.waitKey(1) & 0xFF
     if key == ord('s'):
-        print("Recording will start in 2 seconds...")
+        print("[INFO] Recording will start in 2 seconds...")
         time.sleep(2)
-        print("Recording started...")
+        print("[INFO] Recording started...")
         break
     if key == ord('q'):
-        print("Exiting...")
+        print("[INFO] Exiting...")
         cap.release()
+        hands.close()
         cv.destroyAllWindows()
         exit()
 
+# ----------------- File Naming -----------------
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 if SAVE_RAW_VIDEO:
@@ -101,6 +107,7 @@ columns = (
 
 csv_filename = os.path.join(OUTPUT_FOLDER, f"{gesture_label}_{timestamp}.csv")
 
+# ----------------- Recording Loop -----------------
 with open(csv_filename, mode='w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(columns)
@@ -111,23 +118,21 @@ with open(csv_filename, mode='w', newline='') as file:
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("Error: Failed to grab frame.")
+            print("[ERROR] Failed to grab frame.")
             break
 
         frame = cv.flip(frame, 1)
         rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
         results = hands.process(rgb_frame)
 
-        h1_data = [0] * 63  # Right hand placeholder
-        h2_data = [0] * 63  # Left hand placeholder
+        h1_data = [0] * 63  # Right hand
+        h2_data = [0] * 63  # Left hand
 
         if results.multi_hand_landmarks and results.multi_handedness:
             handedness_info = []
             for hand_idx, handedness in enumerate(results.multi_handedness):
                 label = handedness.classification[0].label  # 'Left' or 'Right'
                 handedness_info.append((label, hand_idx))
-
-            print(f"Detected hands: {handedness_info}")
 
             for label, hand_idx in handedness_info:
                 landmarks = results.multi_hand_landmarks[hand_idx]
@@ -137,12 +142,12 @@ with open(csv_filename, mode='w', newline='') as file:
 
                 if label == "Right":
                     h1_data = row
-                    mp_draw.draw_landmarks(frame, landmarks, mp_hands.HAND_CONNECTIONS, 
-                                           mp_draw.DrawingSpec(color=(0, 255, 0), thickness=2))  # Green for right
+                    mp_draw.draw_landmarks(frame, landmarks, mp_hands.HAND_CONNECTIONS,
+                                           mp_draw.DrawingSpec(color=(0, 255, 0), thickness=2))
                 elif label == "Left":
                     h2_data = row
-                    mp_draw.draw_landmarks(frame, landmarks, mp_hands.HAND_CONNECTIONS, 
-                                           mp_draw.DrawingSpec(color=(255, 0, 0), thickness=2))  # Red for left
+                    mp_draw.draw_landmarks(frame, landmarks, mp_hands.HAND_CONNECTIONS,
+                                           mp_draw.DrawingSpec(color=(255, 0, 0), thickness=2))
 
         combined_row = h1_data + h2_data
         writer.writerow(combined_row)
@@ -154,22 +159,32 @@ with open(csv_filename, mode='w', newline='') as file:
 
         elapsed_time = (cv.getTickCount() - start_time) / fps
         if elapsed_time > DURATION_SEC:
-            print("Recording Complete.")
+            print("[INFO] Recording complete.")
             break
 
         if cv.waitKey(1) & 0xFF == ord('q'):
-            print("Recording Cancelled.")
+            print("[INFO] Recording cancelled.")
             break
 
+# ----------------- Cleanup -----------------
 cap.release()
+hands.close()
 if SAVE_RAW_VIDEO:
     out.release()
 cv.destroyAllWindows()
 
-print(f"Landmark data saved to {csv_filename}")
+print(f"[INFO] Landmark data saved to: {csv_filename}")
 
-# ----------------- Popup after recording -----------------
+# ----------------- Tkinter Popup - Collection Done -----------------
 popup = tk.Tk()
-popup.withdraw()  # Hide main window
-messagebox.showinfo("Recording Complete", f"Gesture '{gesture_label}' recorded successfully!")
-popup.destroy()
+popup.title("Recording Complete")
+popup.geometry("400x150")
+popup.configure(bg="#2c2c2c")
+
+msg = tk.Label(popup, text="✅ Gesture collection completed successfully!", fg="white", bg="#2c2c2c", font=("Arial", 14))
+msg.pack(pady=20)
+
+ok_button = tk.Button(popup, text="OK", command=popup.destroy, font=("Arial", 12), bg="#4CAF50", fg="white", activebackground="#45a049")
+ok_button.pack(pady=10)
+
+popup.mainloop()
