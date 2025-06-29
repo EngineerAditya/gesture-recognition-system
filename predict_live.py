@@ -1,5 +1,5 @@
 # I have used ChatGPT to structure and make this code readable 😄
-# Run this file to start webcam-based gesture recognition with threaded TTS
+# Run this file to start webcam-based gesture recognition with threaded speech and stable CV text
 
 import cv2 as cv
 import mediapipe as mp
@@ -47,13 +47,26 @@ if system_os == 'linux':
 else:
     engine = pyttsx3.init()
 
-engine.setProperty('rate', 135)  # Adjust speed
+engine.setProperty('rate', 135)
 print(f"[INFO] TTS engine ready for {system_os.capitalize()}")
 
-# ----------------- Helper Function for Threaded TTS -----------------
-def speak_text(text):
-    engine.say(text)
-    engine.runAndWait()
+speech_lock = threading.Lock()
+last_spoken = None
+last_spoken_time = 0
+cooldown_sec = 3
+last_prediction_time = 0
+prediction_delay = 1  # 1 second delay between predictions
+displayed_gesture = "No Gesture"
+
+def speak(gesture):
+    global last_spoken, last_spoken_time
+    with speech_lock:
+        current_time = time.time()
+        if gesture != last_spoken or (current_time - last_spoken_time) > cooldown_sec:
+            engine.say(gesture)
+            engine.runAndWait()
+            last_spoken = gesture
+            last_spoken_time = current_time
 
 # ----------------- Start Webcam -----------------
 cap = cv.VideoCapture(0)
@@ -64,10 +77,6 @@ if not cap.isOpened():
 print("[INFO] Webcam started. Press 'q' to quit.")
 
 # ----------------- Live Prediction Loop -----------------
-last_gesture = None
-last_spoken_time = 0
-cooldown_sec = 3  # Cooldown between speaking
-
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -78,8 +87,8 @@ while True:
     rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
     results = hands.process(rgb_frame)
 
-    h1_data = [0] * 63  # Right hand
-    h2_data = [0] * 63  # Left hand
+    h1_data = [0] * 63
+    h2_data = [0] * 63
 
     if results.multi_hand_landmarks and results.multi_handedness:
         handedness_info = []
@@ -103,21 +112,22 @@ while True:
                                        mp_draw.DrawingSpec(color=(255, 0, 0), thickness=2))
 
     combined_row = h1_data + h2_data
+    current_time = time.time()
 
-    if any(combined_row):
+    if any(combined_row) and (current_time - last_prediction_time) > prediction_delay:
         X_input = np.array(combined_row).reshape(1, -1)
         prediction_probs = model.predict(X_input, verbose=0)
         predicted_index = np.argmax(prediction_probs, axis=1)[0]
         gesture_name = le.inverse_transform([predicted_index])[0]
 
-        cv.putText(frame, f"Gesture: {gesture_name}", (10, 50),
-                   cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+        displayed_gesture = gesture_name
+        threading.Thread(target=speak, args=(gesture_name,), daemon=True).start()
 
-        current_time = time.time()
-        if gesture_name != last_gesture or (current_time - last_spoken_time) >= cooldown_sec:
-            threading.Thread(target=speak_text, args=(gesture_name,), daemon=True).start()
-            last_spoken_time = current_time
-            last_gesture = gesture_name
+        last_prediction_time = current_time
+
+    # Always show the last predicted gesture on screen
+    cv.putText(frame, f"Gesture: {displayed_gesture}", (10, 50),
+               cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
     cv.imshow("Live Gesture Prediction", frame)
 
