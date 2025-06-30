@@ -3,6 +3,7 @@
 # 🤖 Real-Time Hand Gesture Recognition with Voice Feedback
 
 This project uses **MediaPipe**, **TensorFlow**, and **OpenCV** to recognize hand gestures from a webcam in real-time. It also provides **audio feedback** using a Text-to-Speech (TTS) engine to announce the detected gesture.
+
 Watch the code run here: https://www.linkedin.com/posts/adityasinha2006_machinelearning-computervision-ai-activity-7345395881346527233-9J2r?utm_source=share&utm_medium=member_desktop&rcm=ACoAAFIBTYABLifzvbm0bR14dN22zxSvlZjLNCs
 
 ---
